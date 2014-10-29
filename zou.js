@@ -8,7 +8,7 @@ function parseExpression(program) {
   else if (match = /^[^\s(),"]+/.exec(program))
     expr = {type: "word", name: match[0]};
   else
-    throw new SyntaxError("Unexpected syntax: " + program);
+    throw new SyntaxError("语法不明: " + program);
 
   return parseApply(expr, program.slice(match[0].length));
 }
@@ -41,7 +41,7 @@ function parseApply(expr, program) {
 function parse(program) {
   var result = parseExpression(program);
   if (skipSpace(result.rest).length > 0)
-    throw new SyntaxError("Unexpected text after program");
+    throw new SyntaxError("程序末尾识别不了");
   return result.expr;
 }
 
@@ -54,7 +54,7 @@ function evaluate(expr, env) {
       if (expr.name in env)
         return env[expr.name];
       else
-        throw new ReferenceError("Undefined variable: " +
+        throw new ReferenceError("变量未定义: " +
                                  expr.name);
     case "apply":
       if (expr.operator.type == "word" &&
@@ -63,7 +63,7 @@ function evaluate(expr, env) {
                                                 env);
       var op = evaluate(expr.operator, env);
       if (typeof op != "function")
-        throw new TypeError("Applying a non-function.");
+        throw new TypeError("应用的不是函数");
       return op.apply(null, expr.args.map(function(arg) {
         return evaluate(arg, env);
       }));
@@ -72,9 +72,9 @@ function evaluate(expr, env) {
 
 var specialForms = Object.create(null);
 
-specialForms["if"] = function(args, env) {
+specialForms["如果"] = function(args, env) {
   if (args.length != 3)
-    throw new SyntaxError("Bad number of args to if");
+    throw new SyntaxError("如果的参数必须为3");
 
   if (evaluate(args[0], env) !== false)
     return evaluate(args[1], env);
@@ -84,7 +84,7 @@ specialForms["if"] = function(args, env) {
 
 specialForms["循环"] = function(args, env) {
   if (args.length != 2)
-    throw new SyntaxError("Bad number of args to while");
+    throw new SyntaxError("参数必须是两个");
 
   while (evaluate(args[0], env) !== false)
     evaluate(args[1], env);
@@ -104,10 +104,31 @@ specialForms["走"] = function(args, env) {
 
 specialForms["定义"] = function(args, env) {
   if (args.length != 2 || args[0].type != "word")
-    throw new SyntaxError("Bad use of define");
+    throw new SyntaxError("定义错啦");
   var value = evaluate(args[1], env);
   env[args[0].name] = value;
   return value;
+};
+
+specialForms["函数"] = function(args, env) {
+  if (!args.length)
+    throw new SyntaxError("需要函数体");
+  function name(expr) {
+    if (expr.type != "word")
+      throw new SyntaxError("Arg names must be words");
+    return expr.name;
+  }
+  var argNames = args.slice(0, args.length - 1).map(name);
+  var body = args[args.length - 1];
+
+  return function() {
+    if (arguments.length != argNames.length)
+      throw new TypeError("参数数目错误");
+    var localEnv = Object.create(env);
+    for (var i = 0; i < arguments.length; i++)
+      localEnv[argNames[i]] = arguments[i];
+    return evaluate(body, localEnv);
+  };
 };
 
 var topEnv = Object.create(null);
