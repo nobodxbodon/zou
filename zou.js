@@ -33,7 +33,7 @@ function parseApply(expr, program) {
     if (program[0] == ",")
       program = skipSpace(program.slice(1));
     else if (program[0] != ")")
-      throw new SyntaxError("Expected ',' or ')'");
+      throw new SyntaxError("期待 ',' 或者 ')'");
   }
   return parseApply(expr, program.slice(1));
 }
@@ -115,7 +115,7 @@ specialForms["函数"] = function(args, env) {
     throw new SyntaxError("需要函数体");
   function name(expr) {
     if (expr.type != "word")
-      throw new SyntaxError("Arg names must be words");
+      throw new SyntaxError("参数名必须为词语");
     return expr.name;
   }
   var argNames = args.slice(0, args.length - 1).map(name);
@@ -123,7 +123,7 @@ specialForms["函数"] = function(args, env) {
 
   return function() {
     if (arguments.length != argNames.length)
-      throw new TypeError("参数数目错误");
+      throw new TypeError(arguments.length+"个参数, 需为"+argNames.length+"个");
     var localEnv = Object.create(env);
     for (var i = 0; i < arguments.length; i++)
       localEnv[argNames[i]] = arguments[i];
